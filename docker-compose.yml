@@ -1,8 +1,9 @@
 version: '2.1'
 
 networks:
-  monitor-net:
-    driver: bridge
+  default:
+    external: 
+      name: swhurl
 
 volumes:
     prometheus_data: {}
@@ -23,11 +24,9 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention=200h'
       - '--web.enable-lifecycle'
-    # restart: unless-stopped
+    restart: unless-stopped
     expose:
       - 9090
-    networks:
-      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
   
@@ -37,13 +36,11 @@ services:
     volumes: 
       - ./alertmanager/:/etc/alertmanager/
     command:
-      - '-config.file=/etc/alertmanager/config.yml'
-      - '-storage.path=/alertmanager'
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
     restart: unless-stopped
     expose:
       - 9093
-    networks:
-      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
 
@@ -63,8 +60,6 @@ services:
     restart: unless-stopped
     expose:
       - 9100
-    networks:
-      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
 
@@ -76,12 +71,10 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-      #- /cgroup:/cgroup:ro #doesn't work on MacOS only for Linux
+      - /cgroup:/cgroup:ro #doesn't work on MacOS only for Linux
     restart: unless-stopped
     expose:
       - 8080
-    networks:
-      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
   
@@ -101,25 +94,6 @@ services:
     restart: unless-stopped
     expose:
       - 3000
-    networks:
-      - monitor-net
     labels:
       org.label-schema.group: "monitoring"
 
-  caddy:
-    image: stefanprodan/caddy
-    container_name: caddy
-    ports:
-      - "3000:3000"
-      - "9090:9090"
-      - "9093:9093"
-    volumes:
-      - ./caddy/:/etc/caddy/
-    environment:
-      - ADMIN_USER=${ADMIN_USER:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-    restart: unless-stopped
-    networks:
-      - monitor-net
-    labels:
-      org.label-schema.group: "monitoring"
